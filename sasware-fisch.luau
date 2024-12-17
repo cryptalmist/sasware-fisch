@@ -4,7 +4,7 @@ local Success, Error = pcall(function()
 	Start = os.clock()
 	NO_HOOKING = false
 
-	local Version = 0.3
+	local Version = 0.4
 	local SubVersion = "indev"
 	local Debugging = true
 	local Title = "Sasware"
@@ -16,12 +16,17 @@ local Success, Error = pcall(function()
 	local TweenService = game:GetService("TweenService")
 	local Debris = game:GetService("Debris")
 	local VirtualInputManager = game:GetService("VirtualInputManager") -- detected ik
+	local VirtualUser = game:GetService("VirtualUser")
 	local StarterGui = game:GetService("StarterGui")
 	local GuiService = game:GetService("GuiService")
 	local CollectionService = game:GetService("CollectionService")
 	local Lighting = game:GetService("Lighting")
 	local ZoneFishOrigin = nil
 	local PreAutoloadConfig = true
+
+	local State = {
+		GettingMeteor = false
+	}
 
 	-- Game instance paths
 	local LocalPlayer = Players.LocalPlayer
@@ -327,6 +332,7 @@ local Success, Error = pcall(function()
 		FishRadar = ReplicatedStorage.resources.items.items["Fish Radar"]["Fish Radar"],
 		TeleportSpots = WaitForTable(workspace, { "world", "spawns", "TpSpots" }),
 		Inventory = WaitForTable(LocalPlayer.PlayerGui, { "hud", "safezone", "backpack" }),
+		MeteorItems = workspace:WaitForChild("MeteorItems"),
 	}
 
 	local Collection = {}
@@ -661,6 +667,7 @@ local Success, Error = pcall(function()
 
 	local Tabs = {
 		Main = Window:AddTab("Main"),
+		Automation = Window:AddTab("Automation"),
 		Visuals = Window:AddTab("Visuals"),
 		Vulnerabilities = Window:AddTab("Vulnerabilities"),
 		Settings = Window:AddTab("Settings"),
@@ -679,7 +686,7 @@ local Success, Error = pcall(function()
 		Tooltip = "Automatically casts for you.",
 	})
 
-	if not (NO_HOOKING) then
+	if not NO_HOOKING then
 		CastingGroup:AddToggle("PerfectCast", {
 			Text = "Always perfect [Server]",
 			Default = false,
@@ -755,7 +762,7 @@ local Success, Error = pcall(function()
 
 	local UtilitiesGroupBox = Tabs.Main:AddRightGroupbox("Utilities")
 
-	if not (NO_HOOKING) then
+	if not NO_HOOKING then
 		UtilitiesGroupBox:AddToggle("FakeFishRadar", {
 			Text = "Fish radar",
 			Default = false,
@@ -775,6 +782,12 @@ local Success, Error = pcall(function()
 		Text = "Infinite oxygen",
 		Default = false,
 		Tooltip = "Gives you infinite oxygen.",
+	})
+
+	UtilitiesGroupBox:AddToggle("AntiAFK", {
+		Text = "Anti-AFK",
+		Default = false,
+		Tooltip = "Prevents you from being kicked for being AFK.",
 	})
 
 	UtilitiesGroupBox:AddDivider()
@@ -872,6 +885,14 @@ local Success, Error = pcall(function()
 		Tooltip = "Zone to fish in",
 	})
 
+	local AutomationMiscGroup = Tabs.Automation:AddLeftGroupbox("Enviromental")
+
+	AutomationMiscGroup:AddToggle("AutoMeteor", {
+		Text = "Auto-Meteor",
+		Default = false,
+		Tooltip = "Automatically grabs item from meteor.",
+	})
+
 	local GameVisualsGroup = Tabs.Visuals:AddLeftGroupbox("In-game")
 
 	GameVisualsGroup:AddToggle("NoLocationCC", {
@@ -926,8 +947,7 @@ local Success, Error = pcall(function()
 
 	-- Initalize hooks / script modifications
 
-	if not (NO_HOOKING) then
-
+	if not NO_HOOKING then
 		local FakeFishRadar = Interface.FishRadar:Clone()
 		local FishRadarTool = Instance.new("Tool")
 
@@ -960,7 +980,6 @@ local Success, Error = pcall(function()
 		OnUnload.Event:Once(function()
 			FishRadarTool:Destroy()
 		end)
-
 	end
 
 	local FakeTank = Instance.new("Glue")
@@ -1014,7 +1033,30 @@ local Success, Error = pcall(function()
 		end
 	end))
 
-	if not (NO_HOOKING) then
+	Collect(Interface.MeteorItems.ChildAdded:Connect(function(Item: Model)
+		if GetToggleValue("AutoMeteor") then
+
+			State.GettingMeteor = true
+
+			local Origin = LocalPlayer.Character:GetPivot()
+			local Prompt: ProximityPrompt = WaitForTable(Item, { "Center", "prompt" }, 5)
+			local Center: Part = Prompt.Parent :: Part
+
+			local TPConnection = RunService.PostSimulation:Connect(function()
+				Utils.TP(Center:GetPivot() - (Vector3.yAxis * 5))
+				fireproximityprompt(Prompt)
+			end)
+
+			task.delay(2, function()
+				TPConnection:Disconnect()
+				Utils.TP(Origin)
+				State.GettingMeteor = false
+			end)
+
+		end
+	end))
+
+	if not NO_HOOKING then
 		local oldindex
 		oldindex = hookmetamethod(game, "__index", function(...)
 			if not Unloaded then
@@ -1280,6 +1322,8 @@ local Success, Error = pcall(function()
 		end
 	end)
 
+	-- yea thats the vulnerability section lol
+
 	Collect(RunService.RenderStepped:Connect(function()
 		if GetToggleValue("SpamTool") then
 			if CurrentTool then
@@ -1298,6 +1342,11 @@ local Success, Error = pcall(function()
 
 	Collect(RunService.PostSimulation:Connect(function()
 		if GetToggleValue("ZoneFish") then
+
+			if State.GettingMeteor then
+				return -- dont conflict with meteor grabbing
+			end
+
 			for _, Part in next, LocalPlayer.Character:GetDescendants() do
 				if Part:IsA("BasePart") then
 					Part.CanTouch = false -- killzones and such
@@ -1339,6 +1388,13 @@ local Success, Error = pcall(function()
 					end
 				end
 			end
+		end
+	end))
+
+	Collect(LocalPlayer.Idled:Connect(function()
+		if GetToggleValue("AntiAFK") then -- pasted from infinite yield weeeeeeeee
+			VirtualUser:CaptureController()
+			VirtualUser:ClickButton2(Vector2.new())
 		end
 	end))
 
