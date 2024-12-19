@@ -4,7 +4,7 @@ local Success, Error = pcall(function()
 	Start = os.clock()
 	NO_HOOKING = false
 
-	local Version = 0.6
+	local Version = 0.61
 	local SubVersion = "indev"
 	local Debugging = true
 	local Title = "Sasware"
@@ -355,7 +355,7 @@ local Success, Error = pcall(function()
 		table.insert(Collection, Item)
 	end
 
-	local Repository = "https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/refs/heads/main/"
+	local Repository = "https://raw.githubusercontent.com/mstudio45/LinoriaLib/refs/heads/main/"
 	local Library = loadstring(game:HttpGet(Repository .. "Library.lua"))()
 	local ThemeManager = loadstring(game:HttpGet(Repository .. "addons/ThemeManager.lua"))()
 	local SaveManager = loadstring(game:HttpGet(Repository .. "addons/SaveManager.lua"))()
