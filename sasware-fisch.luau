@@ -30,12 +30,10 @@ local Success, Error = pcall(function()
 
 	local State = {
 		GettingMeteor = false,
-		OwnedBoats = {}
+		OwnedBoats = {},
 	}
 
-	local GlobalStorage = {
-
-	}
+	local GlobalStorage = {}
 
 	-- Game instance paths
 	local LocalPlayer = Players.LocalPlayer
@@ -573,9 +571,8 @@ local Success, Error = pcall(function()
 			return string.upper(string.sub(String, 1, 1)) .. string.sub(String, 2)
 		end
 
-		function Utils.GetNPC(Type : string, Single : boolean?) : Model | { Model } | nil
-
-			local function GetNPCType(NPC : Model) -- i hate this function so much
+		function Utils.GetNPC(Type: string, Single: boolean?): Model | { Model } | nil
+			local function GetNPCType(NPC: Model) -- i hate this function so much
 				local NPCType = "Unknown"
 
 				if NPC:FindFirstChild("shipwright") then
@@ -593,7 +590,6 @@ local Success, Error = pcall(function()
 			local Results = {}
 
 			for _, Character in next, NPCs do
-
 				local NPCType = GetNPCType(Character)
 
 				if NPCType == Type then
@@ -603,15 +599,12 @@ local Success, Error = pcall(function()
 						table.insert(Results, Character)
 					end
 				end
-
 			end
 
 			return nil
-
 		end
 
 		function Utils.BoatsChanged()
-			
 			local Boats = Interface.PlayerData.Boats:GetChildren()
 
 			State.OwnedBoats = {}
@@ -621,7 +614,6 @@ local Success, Error = pcall(function()
 			end
 
 			UI.Options.BoatSpawnDropdown:SetValues(State.OwnedBoats)
-
 		end
 	end
 
@@ -919,7 +911,7 @@ local Success, Error = pcall(function()
 	})
 
 	local BoatGroupBox = Tabs.Main:AddRightGroupbox("Boat")
-	
+
 	BoatGroupBox:AddDropdown("BoatSpawnDropdown", {
 		Values = State.OwnedBoats,
 		Default = 1,
@@ -964,18 +956,19 @@ local Success, Error = pcall(function()
 			end
 		end
 
-		local Origin : CFrame = LocalPlayer.Character:GetPivot()
+		local Origin: CFrame = LocalPlayer.Character:GetPivot()
 		Camera.CameraType = Enum.CameraType.Scriptable
 
 		TweenService:Create(Camera, TweenInfo.new(0.5), {
-			CFrame = CFrame.new(Origin.Position + Vector3.new(0, 80, 0), Origin.Position)
+			CFrame = CFrame.new(Origin.Position + Vector3.new(0, 80, 0), Origin.Position),
 		}):Play()
 
 		task.wait(0.5)
 
 		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
 
-		local CameraMotionConnection; CameraMotionConnection = RunService.RenderStepped:Connect(function()
+		local CameraMotionConnection
+		CameraMotionConnection = RunService.RenderStepped:Connect(function()
 			local Delta = UserInputService:GetMouseDelta()
 			local X, Y = Delta.X, Delta.Y
 			Camera.CFrame *= CFrame.Angles(0, math.rad(-X * 0.5), 0) * CFrame.Angles(math.rad(-Y * 0.5), 0, 0)
@@ -984,18 +977,16 @@ local Success, Error = pcall(function()
 			Params.FilterType = Enum.RaycastFilterType.Exclude
 			Params.FilterDescendantsInstances = { LocalPlayer.Character, BoatPreview }
 
-			local CameraHit = workspace:Raycast(
-				Camera.CFrame.Position, Camera.CFrame.LookVector * 500, Params
-			)
+			local CameraHit = workspace:Raycast(Camera.CFrame.Position, Camera.CFrame.LookVector * 500, Params)
 
 			if CameraHit then
 				BoatSpawnLocation = CameraHit.Position + Vector3.new(0, 10, 0)
 				BoatPreview:PivotTo(CFrame.new(BoatSpawnLocation))
 			end
-
 		end)
 
-		local InputConnection; InputConnection = UserInputService.InputBegan:Connect(function(Input)
+		local InputConnection
+		InputConnection = UserInputService.InputBegan:Connect(function(Input)
 			if Input.UserInputType == Enum.UserInputType.MouseButton1 then
 				InputConnection:Disconnect()
 				CameraMotionConnection:Disconnect()
@@ -1011,12 +1002,14 @@ local Success, Error = pcall(function()
 				BoatPreview:Destroy()
 
 				if Result then
-
 					LocalPlayer.PlayerGui.hud.safezone.shipwright.ships.main.safezone.spawnattempt:FireServer(BoatName)
 					-- this game is so bad
-					repeat task.wait(.5) until Interface.ActiveBoats:FindFirstChild(LocalPlayer.Name)
+					repeat
+						task.wait(0.5)
+					until Interface.ActiveBoats:FindFirstChild(LocalPlayer.Name)
 
-					local Ship = Interface.ActiveBoats:FindFirstChild(LocalPlayer.Name):FindFirstChildOfClass("Model") :: Model
+					local Ship =
+						Interface.ActiveBoats:FindFirstChild(LocalPlayer.Name):FindFirstChildOfClass("Model") :: Model
 					local Seat = Ship:FindFirstChildOfClass("VehicleSeat")
 					local SitPrompt = Seat:WaitForChild("sitprompt")
 
@@ -1036,18 +1029,18 @@ local Success, Error = pcall(function()
 					WaterRayParams.FilterDescendantsInstances = { workspace.Terrain }
 					WaterRayParams.IgnoreWater = false
 
-					local WaterHeight = workspace:Raycast(Ship.PlanePart.Position + Vector3.new(0, 100, 0), Vector3.new(0, -255, 0))
+					local WaterHeight =
+						workspace:Raycast(Ship.PlanePart.Position + Vector3.new(0, 100, 0), Vector3.new(0, -255, 0))
 
 					if WaterHeight then
-						Ship.PlanePart.Position = Ship.PlanePart.Position * Vector3.new(1, 0, 1) + Vector3.new(0, WaterHeight.Position.Y, 0)
+						Ship.PlanePart.Position = Ship.PlanePart.Position * Vector3.new(1, 0, 1)
+							+ Vector3.new(0, WaterHeight.Position.Y, 0)
 					end
-
 				end
 
 				UI.Library:Toggle()
 			end
 		end)
-
 	end)
 
 	local AutomationMiscGroup = Tabs.Automation:AddLeftGroupbox("Enviromental")
@@ -1233,7 +1226,6 @@ local Success, Error = pcall(function()
 
 	Collect(Interface.MeteorItems.ChildAdded:Connect(function(Item: Model)
 		if GetToggleValue("AutoMeteor") then
-
 			State.GettingMeteor = true
 
 			local Origin = LocalPlayer.Character:GetPivot()
@@ -1250,7 +1242,6 @@ local Success, Error = pcall(function()
 				Utils.TP(Origin)
 				State.GettingMeteor = false
 			end)
-
 		end
 	end))
 
@@ -1384,38 +1375,40 @@ local Success, Error = pcall(function()
 		while true do
 			RunService.RenderStepped:Wait()
 
-			if GetToggleValue("InstantReel") then
-				if LocalPlayer.PlayerGui:FindFirstChild("reel") then
-					local ReelUI: ScreenGui = LocalPlayer.PlayerGui:FindFirstChild("reel")
-					local Bar = ReelUI:FindFirstChild("bar")
+			local ReelUI: ScreenGui = LocalPlayer.PlayerGui:FindFirstChild("reel")
 
-					if Bar then
-						local ReelScript = Bar:FindFirstChild("reel")
-						if ReelScript and ReelScript.Enabled == true then
-							Remotes.ReelFinished:FireServer(100, GetToggleValue("PerfectReel"))
-						end
+			if not ReelUI then
+				continue
+			end
+
+			if GetToggleValue("InstantReel") then
+				local Bar = ReelUI:FindFirstChild("bar")
+
+				if Bar then
+					local ReelScript = Bar:FindFirstChild("reel")
+					if ReelScript and ReelScript.Enabled == true then
+						Remotes.ReelFinished:FireServer(100, GetToggleValue("PerfectReel"))
 					end
 				end
 			elseif GetToggleValue("AutoReel") then
-				if LocalPlayer.PlayerGui:FindFirstChild("reel") then
-					local ReelUI: ScreenGui = LocalPlayer.PlayerGui:FindFirstChild("reel")
-					local Bar = ReelUI:FindFirstChild("bar")
+				local Bar = ReelUI:FindFirstChild("bar")
 
-					if Bar then
-						local PlayerBar: Frame = Bar:FindFirstChild("playerbar")
-						local TargetBar: Frame = Bar:FindFirstChild("fish")
+				if not Bar then
+					continue
+				end
 
-						while Bar and ReelUI:IsDescendantOf(LocalPlayer.PlayerGui) do
-							RunService.RenderStepped:Wait()
-							local UnfilteredTargetPosition = PlayerBar.Position:Lerp(TargetBar.Position, 0.7)
-							local TargetPosition = UDim2.fromScale(
-								math.clamp(UnfilteredTargetPosition.X.Scale, 0.15, 0.85),
-								UnfilteredTargetPosition.Y.Scale
-							)
+				local PlayerBar: Frame = Bar:FindFirstChild("playerbar")
+				local TargetBar: Frame = Bar:FindFirstChild("fish")
 
-							PlayerBar.Position = TargetPosition
-						end
-					end
+				while Bar and ReelUI:IsDescendantOf(LocalPlayer.PlayerGui) do
+					RunService.RenderStepped:Wait()
+					local UnfilteredTargetPosition = PlayerBar.Position:Lerp(TargetBar.Position, 0.7)
+					local TargetPosition = UDim2.fromScale(
+						math.clamp(UnfilteredTargetPosition.X.Scale, 0.15, 0.85),
+						UnfilteredTargetPosition.Y.Scale
+					)
+
+					PlayerBar.Position = TargetPosition
 				end
 			end
 		end
@@ -1460,7 +1453,6 @@ local Success, Error = pcall(function()
 							Events.cast:FireServer(100, 1)
 
 							CastAnimation.Stopped:Once(function()
-
 								CastAnimation:Destroy()
 
 								local WaitingAnimation: AnimationTrack = LocalPlayer.Character
@@ -1497,31 +1489,7 @@ local Success, Error = pcall(function()
 
 	-- VULNERABILTY SECTION: PRONE TO DETECTION & PATCHES
 
-	local SupressFishingCoroutine = coroutine.create(function()
-		while task.wait(0.5) do
-			if GetToggleValue("SupressFishing") then -- im too lazy to make this actually clean
-				pcall(function()
-					for _, Player in next, Players:GetPlayers() do
-						if Player == LocalPlayer then
-							continue
-						end
-
-						local Character = Player.Character
-
-						if Character then
-							for _, Descendant in next, Character:GetDescendants() do
-								if Descendant.Name == "reset" or Descendant.Name == "breakbobber" then
-									if not Descendant:IsDescendantOf(LocalPlayer.Character) then
-										Descendant:FireServer()
-									end
-								end
-							end
-						end
-					end
-				end)
-			end
-		end
-	end)
+	-- all patched for now
 
 	-- yea thats the vulnerability section lol
 
@@ -1543,7 +1511,6 @@ local Success, Error = pcall(function()
 
 	Collect(RunService.PostSimulation:Connect(function()
 		if GetToggleValue("ZoneFish") then
-
 			if State.GettingMeteor then
 				return -- dont conflict with meteor grabbing
 			end
@@ -1603,11 +1570,9 @@ local Success, Error = pcall(function()
 	coroutine.resume(AutoClickCoroutine)
 	coroutine.resume(AutoReelCoroutine)
 	coroutine.resume(AutoCastCoroutine)
-	coroutine.resume(SupressFishingCoroutine)
 	Collect(AutoClickCoroutine)
 	Collect(AutoReelCoroutine)
 	Collect(AutoCastCoroutine)
-	Collect(SupressFishingCoroutine)
 
 	Collect(LocalPlayer.CharacterAdded:Connect(Utils.CharacterAdded))
 	Collect(RunService.RenderStepped:Connect(function()
