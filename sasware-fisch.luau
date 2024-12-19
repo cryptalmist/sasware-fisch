@@ -4,7 +4,7 @@ local Success, Error = pcall(function()
 	Start = os.clock()
 	NO_HOOKING = false
 
-	local Version = 0.6
+	local Version = 0.61
 	local SubVersion = "indev"
 	local Debugging = true
 	local Title = "Sasware"
