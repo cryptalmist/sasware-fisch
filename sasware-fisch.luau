@@ -4,7 +4,7 @@ local Success, Error = pcall(function()
 	Start = os.clock()
 	NO_HOOKING = false
 
-	local Version = 0.4
+	local Version = 0.5
 	local SubVersion = "indev"
 	local Debugging = true
 	local Title = "Sasware"
@@ -20,12 +20,21 @@ local Success, Error = pcall(function()
 	local StarterGui = game:GetService("StarterGui")
 	local GuiService = game:GetService("GuiService")
 	local CollectionService = game:GetService("CollectionService")
+	local UserInputService = game:GetService("UserInputService")
 	local Lighting = game:GetService("Lighting")
+
+	local Camera = workspace.CurrentCamera
+
 	local ZoneFishOrigin = nil
 	local PreAutoloadConfig = true
 
 	local State = {
-		GettingMeteor = false
+		GettingMeteor = false,
+		OwnedBoats = {}
+	}
+
+	local GlobalStorage = {
+
 	}
 
 	-- Game instance paths
@@ -333,6 +342,8 @@ local Success, Error = pcall(function()
 		TeleportSpots = WaitForTable(workspace, { "world", "spawns", "TpSpots" }),
 		Inventory = WaitForTable(LocalPlayer.PlayerGui, { "hud", "safezone", "backpack" }),
 		MeteorItems = workspace:WaitForChild("MeteorItems"),
+		PlayerData = ReplicatedStorage:WaitForChild("playerstats"):WaitForChild(LocalPlayer.Name),
+		NPCs = workspace:WaitForChild("world"):WaitForChild("npcs"),
 	}
 
 	local Collection = {}
@@ -557,6 +568,57 @@ local Success, Error = pcall(function()
 
 		function Utils.Capitalize(String: string): string
 			return string.upper(string.sub(String, 1, 1)) .. string.sub(String, 2)
+		end
+
+		function Utils.GetNPC(Type : string, Single : boolean?) : Model | { Model } | nil
+
+			local function GetNPCType(NPC : Model) -- i hate this function so much
+				local NPCType = "Unknown"
+
+				if NPC:FindFirstChild("shipwright") then
+					NPCType = "Shipwright"
+				elseif NPC:FindFirstChild("merchant") then
+					NPCType = "Merchant"
+				elseif NPC:FindFirstChild("angler") then
+					NPCType = "Angler"
+				end
+
+				return NPCType
+			end
+
+			local NPCs = Interface.NPCs:GetChildren()
+			local Results = {}
+
+			for _, Character in next, NPCs do
+
+				local NPCType = GetNPCType(Character)
+
+				if NPCType == Type then
+					if Single then
+						return Character
+					else
+						table.insert(Results, Character)
+					end
+				end
+
+			end
+
+			return nil
+
+		end
+
+		function Utils.BoatsChanged()
+			
+			local Boats = Interface.PlayerData.Boats:GetChildren()
+
+			State.OwnedBoats = {}
+
+			for _, Boat in next, Boats do
+				table.insert(State.OwnedBoats, Boat.Name)
+			end
+
+			UI.Options.BoatSpawnDropdown:SetValues(State.OwnedBoats)
+
 		end
 	end
 
@@ -853,10 +915,35 @@ local Success, Error = pcall(function()
 		Tooltip = "Spam-activates your equipped tool. [For crates]",
 	})
 
-	local ZoneFish = Tabs.Main:AddLeftGroupbox("Zone-Fish")
+	local BoatGroupBox = Tabs.Main:AddRightGroupbox("Boat")
+	
+	BoatGroupBox:AddDropdown("BoatSpawnDropdown", {
+		Values = State.OwnedBoats,
+		Default = 1,
+		Multi = false,
 
-	ZoneFish:AddToggle("ZoneFish", {
-		Text = "Zone fish",
+		Text = "Select boat",
+		Tooltip = "Boat to spawn",
+	})
+
+	BoatGroupBox:AddButton("Remote-Spawn Boat [Unimplemented]", function()
+		
+		Unimplemented()
+
+	end)
+
+	local AutomationMiscGroup = Tabs.Automation:AddLeftGroupbox("Enviromental")
+
+	AutomationMiscGroup:AddToggle("AutoMeteor", {
+		Text = "Auto-Meteor",
+		Default = false,
+		Tooltip = "Automatically grabs item from meteor.",
+	})
+
+	local AutomationFishingGroup = Tabs.Automation:AddRightGroupbox("Fishing")
+
+	AutomationFishingGroup:AddToggle("ZoneFish", {
+		Text = "Zone-fish",
 		Default = false,
 		Tooltip = "Zones fish for you.",
 		Callback = function(Value: boolean)
@@ -876,21 +963,12 @@ local Success, Error = pcall(function()
 		end,
 	})
 
-	ZoneFish:AddDropdown("ZoneFishDropdown", {
+	AutomationFishingGroup:AddDropdown("ZoneFishDropdown", {
 		Values = FishingZones_DropDownValues,
 		Default = 1,
 		Multi = false,
-
 		Text = "Select zone",
 		Tooltip = "Zone to fish in",
-	})
-
-	local AutomationMiscGroup = Tabs.Automation:AddLeftGroupbox("Enviromental")
-
-	AutomationMiscGroup:AddToggle("AutoMeteor", {
-		Text = "Auto-Meteor",
-		Default = false,
-		Tooltip = "Automatically grabs item from meteor.",
 	})
 
 	local GameVisualsGroup = Tabs.Visuals:AddLeftGroupbox("In-game")
@@ -901,15 +979,9 @@ local Success, Error = pcall(function()
 		Tooltip = "Disables the location Color-Correction.",
 	})
 
-	local GameplayDisruptionGroup = Tabs.Vulnerabilities:AddLeftGroupbox("Gameplay Disruption")
+	local _GameplayDisruptionGroup = Tabs.Vulnerabilities:AddLeftGroupbox("Gameplay Disruption")
 
-	GameplayDisruptionGroup:AddToggle("SupressFishing", {
-		Text = "Fish-EMP [Global]",
-		Default = false,
-		Tooltip = "Makes fishing impossible for other players.",
-	})
-
-	Tabs.Vulnerabilities:AddRightGroupbox("Vulnerabilities"):AddLabel("more soon :D")
+	Tabs.Vulnerabilities:AddRightGroupbox("Vulnerabilities"):AddLabel("dupe coming 2025")
 
 	-- Settings
 
@@ -1000,6 +1072,14 @@ local Success, Error = pcall(function()
 
 	setthreadidentity(7) -- some edge cases with seliware's connection:Fire bugs colliding with unload race conditions cause
 	-- identity to be reset to 3 (or maybe it was 2 i forgot)
+
+	Utils.BoatsChanged()
+
+	Collect(workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+		Camera = workspace.CurrentCamera
+	end))
+
+	Collect(Interface.PlayerData.Boats.AncestryChanged:Connect(Utils.BoatsChanged))
 
 	Collect(workspace:WaitForChild("active").ChildAdded:Connect(function(Child: Instance)
 		if Child:IsA("Model") then
