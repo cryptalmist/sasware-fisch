@@ -4,7 +4,7 @@ local Success, Error = pcall(function()
 	Start = os.clock()
 	NO_HOOKING = false
 
-	local Version = 0.5
+	local Version = 0.6
 	local SubVersion = "indev"
 	local Debugging = true
 	local Title = "Sasware"
@@ -344,6 +344,9 @@ local Success, Error = pcall(function()
 		MeteorItems = workspace:WaitForChild("MeteorItems"),
 		PlayerData = ReplicatedStorage:WaitForChild("playerstats"):WaitForChild(LocalPlayer.Name),
 		NPCs = workspace:WaitForChild("world"):WaitForChild("npcs"),
+		BoatModels = WaitForTable(ReplicatedStorage, { "resources", "replicated", "instances", "vessels" }),
+		Active = workspace:WaitForChild("active"),
+		ActiveBoats = workspace:WaitForChild("active"):WaitForChild("boats"),
 	}
 
 	local Collection = {}
@@ -926,9 +929,124 @@ local Success, Error = pcall(function()
 		Tooltip = "Boat to spawn",
 	})
 
-	BoatGroupBox:AddButton("Remote-Spawn Boat [Unimplemented]", function()
-		
-		Unimplemented()
+	BoatGroupBox:AddButton("Remote-Spawn Boat", function()
+		UI.Library:Toggle()
+
+		local BoatSpawnLocation = LocalPlayer.Character:GetPivot().Position
+		local BoatPreview = nil
+		local BoatName = GetOptionValue("BoatSpawnDropdown")
+		local ShipwrightNPC = Utils.GetNPC("Shipwright", true)
+
+		if not ShipwrightNPC then
+			Utils.GenericToast(3, "Shipwright not found.")
+			UI.Library:Toggle()
+			return
+		end
+
+		if not BoatName then
+			Utils.GenericToast(3, "Please select a boat.")
+			UI.Library:Toggle()
+			return
+		end
+
+		if Interface.BoatModels:FindFirstChild(BoatName) then
+			BoatPreview = Interface.BoatModels:FindFirstChild(BoatName):Clone()
+			BoatPreview.Parent = Camera
+		else
+			BoatPreview = Instance.new("Model")
+		end
+
+		for _, Part in next, BoatPreview:GetDescendants() do
+			if Part:IsA("BasePart") then
+				Part.Anchored = true
+				Part.CanCollide = false
+				Part.CanTouch = false
+			end
+		end
+
+		local Origin : CFrame = LocalPlayer.Character:GetPivot()
+		Camera.CameraType = Enum.CameraType.Scriptable
+
+		TweenService:Create(Camera, TweenInfo.new(0.5), {
+			CFrame = CFrame.new(Origin.Position + Vector3.new(0, 80, 0), Origin.Position)
+		}):Play()
+
+		task.wait(0.5)
+
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
+
+		local CameraMotionConnection; CameraMotionConnection = RunService.RenderStepped:Connect(function()
+			local Delta = UserInputService:GetMouseDelta()
+			local X, Y = Delta.X, Delta.Y
+			Camera.CFrame *= CFrame.Angles(0, math.rad(-X * 0.5), 0) * CFrame.Angles(math.rad(-Y * 0.5), 0, 0)
+
+			local Params = RaycastParams.new()
+			Params.FilterType = Enum.RaycastFilterType.Exclude
+			Params.FilterDescendantsInstances = { LocalPlayer.Character, BoatPreview }
+
+			local CameraHit = workspace:Raycast(
+				Camera.CFrame.Position, Camera.CFrame.LookVector * 500, Params
+			)
+
+			if CameraHit then
+				BoatSpawnLocation = CameraHit.Position + Vector3.new(0, 10, 0)
+				BoatPreview:PivotTo(CFrame.new(BoatSpawnLocation))
+			end
+
+		end)
+
+		local InputConnection; InputConnection = UserInputService.InputBegan:Connect(function(Input)
+			if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+				InputConnection:Disconnect()
+				CameraMotionConnection:Disconnect()
+				Camera.CameraType = Enum.CameraType.Custom
+				UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+
+				LocalPlayer.Character:PivotTo(ShipwrightNPC:GetPivot())
+				fireproximityprompt(ShipwrightNPC.dialogprompt)
+
+				task.wait(0.3)
+
+				local Result = ShipwrightNPC.shipwright.giveUI:InvokeServer()
+				BoatPreview:Destroy()
+
+				if Result then
+
+					LocalPlayer.PlayerGui.hud.safezone.shipwright.ships.main.safezone.spawnattempt:FireServer(BoatName)
+					-- this game is so bad
+					repeat task.wait(.5) until Interface.ActiveBoats:FindFirstChild(LocalPlayer.Name)
+
+					local Ship = Interface.ActiveBoats:FindFirstChild(LocalPlayer.Name):FindFirstChildOfClass("Model") :: Model
+					local Seat = Ship:FindFirstChildOfClass("VehicleSeat")
+					local SitPrompt = Seat:WaitForChild("sitprompt")
+
+					task.wait(0.5)
+					fireproximityprompt(SitPrompt)
+					task.wait(0.5)
+
+					for i = 1, 60 do
+						task.wait()
+						Ship:PivotTo(CFrame.new(BoatSpawnLocation))
+					end
+
+					Ship.PlanePart.Rotation = Vector3.new(0, 0, 0)
+
+					local WaterRayParams = RaycastParams.new()
+					WaterRayParams.FilterType = Enum.RaycastFilterType.Include
+					WaterRayParams.FilterDescendantsInstances = { workspace.Terrain }
+					WaterRayParams.IgnoreWater = false
+
+					local WaterHeight = workspace:Raycast(Ship.PlanePart.Position + Vector3.new(0, 100, 0), Vector3.new(0, -255, 0))
+
+					if WaterHeight then
+						Ship.PlanePart.Position = Ship.PlanePart.Position * Vector3.new(1, 0, 1) + Vector3.new(0, WaterHeight.Position.Y, 0)
+					end
+
+				end
+
+				UI.Library:Toggle()
+			end
+		end)
 
 	end)
 
