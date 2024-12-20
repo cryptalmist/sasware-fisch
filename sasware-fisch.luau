@@ -1114,6 +1114,14 @@ local Success, Error = pcall(function()
 
 	Library.ToggleKeybind = UI.Options.MenuKeybind
 
+	MenuGroup:AddToggle("ShowCustomCursor", {
+	        Text = "Custom Cursor",
+	        Default = true,
+	        Callback = function(Value) Library.ShowCustomCursor = Value end
+	})
+
+	Library.ShowCustomCursor = UI.Toggles.ShowCustomCursor.Value
+
 	ThemeManager:SetLibrary(Library)
 	SaveManager:SetLibrary(Library)
 
@@ -1501,6 +1509,8 @@ local Success, Error = pcall(function()
 				end
 			end
 		end
+
+		UserInputService.MouseIconEnabled = not GetToggleValue("ShowCustomCursor") or not UI.Library.Toggled
 
 		if GetToggleValue("NoLocationCC") then
 			Utils.ToggleLocationCC(false)
