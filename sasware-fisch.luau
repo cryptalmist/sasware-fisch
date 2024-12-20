@@ -1120,6 +1120,8 @@ local Success, Error = pcall(function()
 	        Callback = function(Value) Library.ShowCustomCursor = Value end
 	})
 
+	Library.ShowCustomCursor = UI.Toggles.ShowCustomCursor.Value
+
 	ThemeManager:SetLibrary(Library)
 	SaveManager:SetLibrary(Library)
 
