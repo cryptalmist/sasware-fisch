@@ -1508,11 +1508,7 @@ local Success, Error = pcall(function()
 			end
 		end
 
-		if UI.Library.Toggled then
-			UserInputService.MouseBehavior = Enum.MouseBehavior.Default 
-			UserInputService.MouseIcon = "rbxassetid://2833720882"
-			UserInputService.MouseIconEnabled = not GetToggleValue("ShowCustomCursor")
-		end
+		UserInputService.MouseIconEnabled = not GetToggleValue("ShowCustomCursor") or not UI.Library.Toggled
 
 		if GetToggleValue("NoLocationCC") then
 			Utils.ToggleLocationCC(false)
