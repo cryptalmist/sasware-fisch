@@ -1114,6 +1114,12 @@ local Success, Error = pcall(function()
 
 	Library.ToggleKeybind = UI.Options.MenuKeybind
 
+	MenuGroup:AddToggle("ShowCustomCursor", {
+	        Text = "Custom Cursor",
+	        Default = true,
+	        Callback = function(Value) Library.ShowCustomCursor = Value end
+	})
+
 	ThemeManager:SetLibrary(Library)
 	SaveManager:SetLibrary(Library)
 
@@ -1500,6 +1506,12 @@ local Success, Error = pcall(function()
 					CurrentTool:Activate()
 				end
 			end
+		end
+
+		if GetToggleValue("ShowCustomCursor") and UI.Library.Toggled then
+			UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+			UserInputService.MouseIcon = "rbxassetid://2833720882"
+			UserInputService.MouseIconEnabled = true
 		end
 
 		if GetToggleValue("NoLocationCC") then
