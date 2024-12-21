@@ -12,7 +12,12 @@ local Success, Error = pcall(function()
 	local HttpService = game:GetService("HttpService")
 	local Players = game:GetService("Players")
 	local RunService = game:GetService("RunService")
-	local ReplicatedStorage = game:GetService("ReplicatedStorage"):WaitForChild("Link")
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+	if ReplicatedStorage:WaitForChild("Link", 1) then
+		ReplicatedStorage = ReplicatedStorage:WaitForChild("Link") -- the devs are tweaking
+	end
+
 	local TweenService = game:GetService("TweenService")
 	local Debris = game:GetService("Debris")
 	local VirtualInputManager = game:GetService("VirtualInputManager") -- detected ik
