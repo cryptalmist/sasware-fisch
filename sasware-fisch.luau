@@ -4,7 +4,7 @@ local Success, Error = pcall(function()
 	Start = os.clock()
 	NO_HOOKING = false
 
-	local Version = 0.7
+	local Version = 0.8
 	local SubVersion = "indev"
 	local Debugging = true
 	local Title = "Sasware"
@@ -27,10 +27,22 @@ local Success, Error = pcall(function()
 	local CollectionService = game:GetService("CollectionService")
 	local UserInputService = game:GetService("UserInputService")
 	local Lighting = game:GetService("Lighting")
+	local VeryImportantPart = Instance.new("Part") -- fake zone for tricking temperature/oxygen scripts
+	-- 													it's scuffed but works on literally any exec
 
+	do
+		local prio = Instance.new("IntValue", VeryImportantPart)
+		prio.Name = "priority"
+		prio.Value = 999
+		local name = Instance.new("StringValue", VeryImportantPart)
+		name.Name = "zonename"
+		name.Value = "sasware"
+	end
+	
 	local Camera = workspace.CurrentCamera
 
 	local ZoneFishOrigin = nil
+
 	local PreAutoloadConfig = true
 
 	local State = {
@@ -38,7 +50,14 @@ local Success, Error = pcall(function()
 		OwnedBoats = {},
 	}
 
-	local GlobalStorage = {}
+	local GlobalStorage = {
+		PeakZones = {
+			["Overgrowth Caves"] = true,
+			["Frigid Cavern"] = true,
+			["Cryogenic Canal"] = true,
+			["Glacial Grotto"] = true
+		}
+	}
 
 	-- Game instance paths
 	local LocalPlayer = Players.LocalPlayer
@@ -50,6 +69,10 @@ local Success, Error = pcall(function()
 		hookfunction = function(...) end
 		hookmetamethod = function(...) end
 		NO_HOOKING = true
+	end
+
+	if not getconnections then
+		getconnections = function(...) end
 	end
 
 	if not setthreadidentity then
@@ -589,6 +612,16 @@ local Success, Error = pcall(function()
 
 			Collect(Character.ChildAdded:Connect(Utils.CharacterChildAdded))
 			Collect(Character.ChildRemoved:Connect(Utils.CharacterChildRemoved))
+
+			local Zone = Character:WaitForChild("zone", 1) :: ObjectValue
+
+			if Zone then
+				Collect(RunService.RenderStepped:Connect(function()
+					if GetToggleValue("DisablePeakEffects") then
+						Zone.Value = VeryImportantPart
+					end
+				end))
+			end
 		end
 
 		function Utils.Capitalize(String: string): string
@@ -859,8 +892,14 @@ local Success, Error = pcall(function()
 		})
 	end
 
+	UtilitiesGroupBox:AddToggle("DisablePeakEffects", {
+		Text = "Disable oxygen/temperature",
+		Default = false,
+		Tooltip = "Disables peak effects."
+	})
+
 	UtilitiesGroupBox:AddToggle("InfiniteOxygen", {
-		Text = "Infinite oxygen",
+		Text = "Infinite oxygen [Water]",
 		Default = false,
 		Tooltip = "Gives you infinite oxygen.",
 	})
@@ -1018,9 +1057,9 @@ local Success, Error = pcall(function()
 				UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 
 				LocalPlayer.Character:PivotTo(ShipwrightNPC:GetPivot())
-				fireproximityprompt(ShipwrightNPC.dialogprompt)
 
 				task.wait(0.3)
+				fireproximityprompt(ShipwrightNPC.dialogprompt)
 
 				local Result = ShipwrightNPC.shipwright.giveUI:InvokeServer()
 				BoatPreview:Destroy()
@@ -1683,6 +1722,7 @@ local Success, Error = pcall(function()
 			CollectionService:RemoveTag(PersistentModel, "ForcePersistent")
 			PersistentModel:SetAttribute("OldStreamingMode", nil)
 		end
+
 	end)
 
 	if LocalPlayer.Character then
