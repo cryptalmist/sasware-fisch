@@ -4,7 +4,7 @@ local Success, Error = pcall(function()
 	Start = os.clock()
 	NO_HOOKING = false
 
-	local Version = 0.61
+	local Version = 0.7
 	local SubVersion = "indev"
 	local Debugging = true
 	local Title = "Sasware"
@@ -12,7 +12,7 @@ local Success, Error = pcall(function()
 	local HttpService = game:GetService("HttpService")
 	local Players = game:GetService("Players")
 	local RunService = game:GetService("RunService")
-	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+	local ReplicatedStorage = game:GetService("ReplicatedStorage"):WaitForChild("Link")
 	local TweenService = game:GetService("TweenService")
 	local Debris = game:GetService("Debris")
 	local VirtualInputManager = game:GetService("VirtualInputManager") -- detected ik
@@ -540,6 +540,25 @@ local Success, Error = pcall(function()
 		function Utils.CharacterChildAdded(Child: Instance)
 			if Child:IsA("Tool") then
 				CurrentTool = Child
+
+				if GetToggleValue("ServerStresser") then
+					
+					local FishModel = Child:WaitForChild("Fish", 1)
+
+					if FishModel then
+						FishModel:Destroy()
+					end
+
+					task.delay(0.5, function()
+						for i,v in next, Child:GetDescendants() do
+							if v:IsA("BasePart") then
+								v.Anchored = true
+							end
+						end
+					end)
+
+				end
+
 			elseif Child:IsA("Humanoid") then
 				Collect(Child.StateChanged:Connect(function()
 					if GetToggleValue("ZoneFish") then
@@ -1090,7 +1109,22 @@ local Success, Error = pcall(function()
 		Tooltip = "Disables the location Color-Correction.",
 	})
 
-	local _GameplayDisruptionGroup = Tabs.Vulnerabilities:AddLeftGroupbox("Gameplay Disruption")
+	local GameplayDisruptionGroup = Tabs.Vulnerabilities:AddLeftGroupbox("Gameplay Disruption")
+
+	GameplayDisruptionGroup:AddToggle("ServerStresser", {
+		Text = "Lag/Crash server",
+		Default = false,
+		Tooltip = "Spams tools to lag the server.",
+		Callback = function(Value : boolean)
+			if not Value then
+				game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
+			else
+				Utils.TP(LocalPlayer.Character:GetPivot().Position + Vector3.new(0, 9e9, 0))
+			end
+		end
+	})
+
+	GameplayDisruptionGroup:AddLabel("The server lagger is irreversible and you will be forced to rejoin if you want to disable it.", true)
 
 	Tabs.Vulnerabilities:AddRightGroupbox("Vulnerabilities"):AddLabel("dupe coming 2025")
 
@@ -1115,11 +1149,10 @@ local Success, Error = pcall(function()
 	Library.ToggleKeybind = UI.Options.MenuKeybind
 
 	MenuGroup:AddToggle("ShowCustomCursor", {
-	        Text = "Custom Cursor",
-	        Default = true,
-	        Callback = function(Value) Library.ShowCustomCursor = Value end
+		Text = "Custom Cursor",
+		Default = true,
+		Callback = function(Value) Library.ShowCustomCursor = Value end
 	})
-
 	Library.ShowCustomCursor = UI.Toggles.ShowCustomCursor.Value
 
 	ThemeManager:SetLibrary(Library)
@@ -1495,6 +1528,44 @@ local Success, Error = pcall(function()
 		end
 	end)
 
+	local ServerStressCoroutine = coroutine.create(function()
+
+		local Backpack = LocalPlayer.Backpack
+
+		local function IsFish(Tool : Tool)
+			return Tool:FindFirstChild("fishscript") or (Tool:GetAttribute("IsFish") == true)
+		end
+
+		while task.wait(5) do
+
+			if not GetToggleValue("ServerStresser") then
+				continue
+			end
+
+			for i, Tool in next, Backpack:GetChildren() do
+				task.spawn(function()
+					if IsFish(Tool) then
+
+						Tool:SetAttribute("IsFish", true)
+	
+						local FishModel = Tool:FindFirstChild("Fish")
+	
+						if FishModel then
+							FishModel:Destroy()
+						end
+	
+						Tool.Parent = LocalPlayer.Character
+	
+					end
+				end)
+			end
+
+			LocalPlayer.Character.Humanoid:UnequipTools()
+
+		end
+
+	end)
+
 	-- VULNERABILTY SECTION: PRONE TO DETECTION & PATCHES
 
 	-- all patched for now
@@ -1577,9 +1648,11 @@ local Success, Error = pcall(function()
 	end))
 
 	-- Start coroutines
+	coroutine.resume(ServerStressCoroutine)
 	coroutine.resume(AutoClickCoroutine)
 	coroutine.resume(AutoReelCoroutine)
 	coroutine.resume(AutoCastCoroutine)
+	Collect(ServerStressCoroutine)
 	Collect(AutoClickCoroutine)
 	Collect(AutoReelCoroutine)
 	Collect(AutoCastCoroutine)
