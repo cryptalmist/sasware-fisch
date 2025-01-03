@@ -2,6 +2,7 @@ local fscript = Instance.new("Folder")
 fscript.Name = "Toasts"
 
 local Players = game:GetService("Players")
+local Debris = game:GetService("Debris")
 
 -- Instances:
 
