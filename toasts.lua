@@ -1,6 +1,8 @@
 local fscript = Instance.new("Folder")
 fscript.Name = "Toasts"
 
+local Players = game:GetService("Players")
+
 -- Instances:
 
 local Toast = Instance.new("ImageLabel")
