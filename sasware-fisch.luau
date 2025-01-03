@@ -4,7 +4,7 @@ local Success, Error = pcall(function()
 	Start = os.clock()
 	NO_HOOKING = false
 
-	local Version = 0.8
+	local Version = 0.9
 	local SubVersion = "indev"
 	local Debugging = true
 	local Title = "Sasware"
@@ -29,6 +29,8 @@ local Success, Error = pcall(function()
 	local Lighting = game:GetService("Lighting")
 	local VeryImportantPart = Instance.new("Part") -- fake zone for tricking temperature/oxygen scripts
 	-- 													it's scuffed but works on literally any exec
+
+	local Toasts = loadstring(game:HttpGet("https://raw.githubusercontent.com/centerepic/sasware-fisch/refs/heads/main/toasts.lua"))()
 
 	do
 		local prio = Instance.new("IntValue", VeryImportantPart)
@@ -79,211 +81,6 @@ local Success, Error = pcall(function()
 		setthreadidentity = function(...) end -- i hate you solara
 	end
 
-	local Toasts
-
-	do
-		local fscript = Instance.new("Folder")
-		fscript.Name = "Toasts"
-
-		-- Instances:
-
-		local Toast = Instance.new("ImageLabel")
-		local IconBuffer = Instance.new("Frame")
-		local Icon = Instance.new("ImageLabel")
-		local TextBuffer = Instance.new("Frame")
-		local Upper = Instance.new("TextLabel")
-		local Lower = Instance.new("TextLabel")
-		local UIGradient = Instance.new("UIGradient")
-
-		--Properties:
-
-		Toast.Name = "Toast"
-		Toast.Parent = fscript
-		Toast.AnchorPoint = Vector2.new(0.5, 0)
-		Toast.BackgroundTransparency = 1.000
-		Toast.BorderColor3 = Color3.fromRGB(27, 42, 53)
-		Toast.BorderSizePixel = 0
-		Toast.ClipsDescendants = true
-		Toast.Position = UDim2.new(0.5, 0, 0, 8)
-		Toast.Size = UDim2.new(0, 80, 0, 58)
-		Toast.ZIndex = 2
-		Toast.Image = "rbxasset://textures/ui/Camera/CameraToast9Slice.png"
-		Toast.ImageColor3 = Color3.fromRGB(27, 15, 32)
-		Toast.ImageRectSize = Vector2.new(6, 6)
-		Toast.ImageTransparency = 1.000
-		Toast.ScaleType = Enum.ScaleType.Slice
-		Toast.SliceCenter = Rect.new(3, 3, 3, 3)
-
-		IconBuffer.Name = "IconBuffer"
-		IconBuffer.Parent = Toast
-		IconBuffer.BackgroundTransparency = 1.000
-		IconBuffer.BorderColor3 = Color3.fromRGB(27, 42, 53)
-		IconBuffer.BorderSizePixel = 0
-		IconBuffer.Size = UDim2.new(0, 80, 1, 0)
-		IconBuffer.ZIndex = 2
-
-		Icon.Name = "Icon"
-		Icon.Parent = IconBuffer
-		Icon.AnchorPoint = Vector2.new(0.5, 0.5)
-		Icon.BackgroundTransparency = 1.000
-		Icon.BorderColor3 = Color3.fromRGB(27, 42, 53)
-		Icon.Position = UDim2.new(0.5, 0, 0.5, 0)
-		Icon.Size = UDim2.new(0, 48, 0, 48)
-		Icon.ZIndex = 3
-		Icon.Image = "rbxasset://textures/ui/Camera/CameraToastIcon.png"
-		Icon.ImageColor3 = Color3.fromRGB(200, 200, 200)
-		Icon.ImageTransparency = 1.000
-
-		TextBuffer.Name = "TextBuffer"
-		TextBuffer.Parent = Toast
-		TextBuffer.BackgroundTransparency = 1.000
-		TextBuffer.BorderColor3 = Color3.fromRGB(27, 42, 53)
-		TextBuffer.BorderSizePixel = 0
-		TextBuffer.ClipsDescendants = true
-		TextBuffer.Position = UDim2.new(0, 80, 0, 0)
-		TextBuffer.Size = UDim2.new(1, -80, 1, 0)
-		TextBuffer.ZIndex = 2
-
-		Upper.Name = "Upper"
-		Upper.Parent = TextBuffer
-		Upper.AnchorPoint = Vector2.new(0, 1)
-		Upper.BackgroundTransparency = 1.000
-		Upper.BorderColor3 = Color3.fromRGB(27, 42, 53)
-		Upper.Position = UDim2.new(0, 0, 0.5, 0)
-		Upper.Size = UDim2.new(1, 0, 0, 19)
-		Upper.ZIndex = 3
-		Upper.Font = Enum.Font.GothamMedium
-		Upper.Text = "Upper text"
-		Upper.TextColor3 = Color3.fromRGB(200, 200, 200)
-		Upper.TextSize = 19.000
-		Upper.TextTransparency = 1.000
-		Upper.TextXAlignment = Enum.TextXAlignment.Left
-
-		Lower.Name = "Lower"
-		Lower.Parent = TextBuffer
-		Lower.BackgroundTransparency = 1.000
-		Lower.BorderColor3 = Color3.fromRGB(27, 42, 53)
-		Lower.Position = UDim2.new(0, 0, 0.5, 3)
-		Lower.Size = UDim2.new(1, 0, 0, 15)
-		Lower.ZIndex = 3
-		Lower.Font = Enum.Font.Gotham
-		Lower.Text = "Lower text"
-		Lower.TextColor3 = Color3.fromRGB(200, 200, 200)
-		Lower.TextSize = 15.000
-		Lower.TextTransparency = 1.000
-		Lower.TextXAlignment = Enum.TextXAlignment.Left
-
-		UIGradient.Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 255, 255)),
-			ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 236, 203)),
-		})
-		UIGradient.Parent = Toast
-
-		local module = {}
-
-		local function AnimateToast(toast, anim)
-			local tweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-			local open = anim == "open"
-
-			local imgParams = { ImageTransparency = open and 0 or 1 }
-			local txtParams = { TextTransparency = open and 0 or 1 }
-
-			TweenService:Create(toast, tweenInfo, {
-				Size = open and UDim2.new(0, 326, 0, 58) or UDim2.new(0, 80, 0, 58),
-				ImageTransparency = open and 0.1 or 1,
-			}):Play()
-
-			TweenService:Create(toast.IconBuffer.Icon, tweenInfo, imgParams):Play()
-			TweenService:Create(toast.TextBuffer.Upper, tweenInfo, txtParams):Play()
-			TweenService:Create(toast.TextBuffer.Lower, tweenInfo, txtParams):Play()
-
-			toast = not open and Debris:AddItem(toast, 0.25)
-		end
-
-		local function GetGui()
-			local Player = Players.LocalPlayer
-			local gui = Player.PlayerGui:FindFirstChild("Toasts") or Instance.new("ScreenGui", Player.PlayerGui)
-			gui.DisplayOrder = 2147483647
-			gui.Name = "Toasts"
-
-			return gui
-		end
-
-		local function empty()
-			return function() end
-		end
-
-		module.CreateToast = function(ToastId, TopText, BottomText, IconId, DisplayTime)
-			local newToast = fscript.Toast:Clone()
-			newToast.TextBuffer.Upper.Text = TopText
-			newToast.TextBuffer.Lower.Text = BottomText
-			newToast.IconBuffer.Icon.Image = IconId
-			newToast.Name = ToastId
-
-			local oldToast = GetGui():FindFirstChild(ToastId)
-			local run = false
-
-			if oldToast then
-				run = oldToast.ImageTransparency < 0.1
-			end
-
-			if not run then
-				Debris:AddItem(newToast, DisplayTime or math.huge)
-				AnimateToast(newToast, "open")
-				newToast.Parent = GetGui()
-
-				return {
-					CancelToast = function()
-						AnimateToast(newToast, "cancel")
-					end,
-					DestroyToast = function(delaytime: "optional")
-						Debris:AddItem(newToast, delaytime or 0)
-					end,
-					HideToast = function()
-						newToast.Visible = false
-					end,
-					ShowToast = function()
-						newToast.Visible = true
-					end,
-				}
-			else
-				return { CancelToast = empty(), DestroyToast = empty(), HideToast = empty(), ShowToast = empty() }
-			end
-		end
-
-		module.GetToast = function(id)
-			local gui = GetGui()
-			local toast = gui:FindFirstChild(id)
-
-			if toast then
-				return {
-					CancelToast = function()
-						AnimateToast(toast, "cancel")
-					end,
-					DestroyToast = function(delaytime: "optional")
-						Debris:AddItem(toast, delaytime or 0)
-					end,
-					HideToast = function()
-						toast.Visible = false
-					end,
-					ShowToast = function()
-						toast.Visible = true
-					end,
-				}
-			else
-				return { CancelToast = empty(), DestroyToast = empty(), HideToast = empty(), ShowToast = empty() }
-			end
-		end
-
-		module.CancelAllToasts = function()
-			for i, toast in pairs(GetGui():GetChildren()) do
-				AnimateToast(toast, "cancel")
-			end
-		end
-
-		Toasts = module
-	end
-
 	if getgenv().sasware_fisch_unload then
 		pcall(getgenv().sasware_fisch_unload)
 	end
@@ -320,39 +117,9 @@ local Success, Error = pcall(function()
 		return (Instance and Instance:IsDescendantOf(game))
 	end
 
-	local function _BetterRound(num, numDecimalPlaces): number
+	local function _round(num, numDecimalPlaces): number
 		local mult = 10 ^ (numDecimalPlaces or 0)
 		return math.floor(num * mult + 0.5) / mult
-	end
-
-	local function _GetClosest(Instances: { Model | BasePart }, Position: Vector3)
-		local Closest = nil
-		local ClosestDistance = math.huge
-
-		for _, Object in ipairs(Instances) do
-			local InstancePosition = Object:GetPivot().Position
-			local Distance = (InstancePosition - Position).Magnitude
-			if Distance < ClosestDistance then
-				Closest = Object
-				ClosestDistance = Distance
-			end
-		end
-
-		return Closest, ClosestDistance
-	end
-
-	local function _GetWithinRange(Instances: { Model | BasePart }, Position: Vector3, Range: number)
-		local Objects = {}
-
-		for _, Object in ipairs(Instances) do
-			local InstancePosition = Object:GetPivot().Position
-			local Distance = (InstancePosition - Position).Magnitude
-			if Distance <= Range then
-				table.insert(Objects, Object)
-			end
-		end
-
-		return Objects
 	end
 
 	local Configuration = {
@@ -418,6 +185,33 @@ local Success, Error = pcall(function()
 
 	local Utils = {}
 	do
+
+		function Utils.CountInstances(Parent : Instance, Name : string) : number
+			local Count = 0
+			for _, Instance in next, Parent:GetChildren() do
+				if Instance.Name == Name then
+					Count += 1
+				end
+			end
+			return Count
+		end
+
+		function Utils:BreakVelocity()
+			if LocalPlayer.Character then
+				task.spawn(function()
+					for i = 20, 1, -1 do
+						RunService.Heartbeat:Wait()
+						for _, Part in next, LocalPlayer.Character:GetDescendants() do
+							if Part:IsA("BasePart") then
+								Part.Velocity = Vector3.new(0, 0, 0)
+								Part.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+							end
+						end
+					end
+				end)
+			end
+		end
+
 		function Utils.ToggleLocationCC(Value: boolean)
 			local LocationCC = Lighting:FindFirstChild("location")
 
@@ -672,6 +466,19 @@ local Success, Error = pcall(function()
 
 			UI.Options.BoatSpawnDropdown:SetValues(State.OwnedBoats)
 		end
+
+		function Utils.UpdateShopDropdown()
+			local Items = workspace:WaitForChild("world"):WaitForChild("interactables"):GetChildren()
+
+			local Values = {}
+
+			for _, Item in next, Items do
+				table.insert(Values, Item.Name)
+			end
+
+			UI.Options.RemoteShopDropdown:SetValues(Values)
+		end
+
 	end
 
 	local TeleportLocations = {}
@@ -710,12 +517,6 @@ local Success, Error = pcall(function()
 				ToolCache.Parent = LocalPlayer.Character
 			end
 		end
-	end
-
-	local function pop(tbl: { any }, idx: number)
-		local value = tbl[idx]
-		table.remove(tbl, idx)
-		return value
 	end
 
 	local function Unload()
@@ -972,6 +773,44 @@ local Success, Error = pcall(function()
 		Default = false,
 		Tooltip = "Spam-activates your equipped tool. [For crates]",
 	})
+
+	local ShopGroupBox = Tabs.Main:AddLeftGroupbox("Remote Shop")
+	
+	ShopGroupBox:AddDropdown("RemoteShopDropdown", {
+		Values = {},
+		Default = 1,
+		Multi = false,
+		Text = "Target item",
+		Tooltip = "The item you want to buy",
+	})
+
+	ShopGroupBox:AddButton("Buy Item", function()
+		local Selected = GetOptionValue("RemoteShopDropdown")
+		local Item = workspace:WaitForChild("world"):WaitForChild("interactables"):FindFirstChild(Selected) :: Model?
+
+		if Item then
+
+			local Origin = LocalPlayer.Character:GetPivot()
+			local LockPositionConnection = RunService.Heartbeat:Connect(function()
+				Utils.TP(Item:GetPivot())
+			end)
+
+			task.wait(0.3)
+
+			for _, Descendant in next, Item:GetDescendants() do
+				if Descendant:IsA("ProximityPrompt") then
+					fireproximityprompt(Descendant)
+					break
+				end
+			end
+
+			task.wait(0.3)
+
+			LockPositionConnection:Disconnect()
+			Utils.TP(Origin.Position)
+			Utils:BreakVelocity()
+		end
+	end)
 
 	local BoatGroupBox = Tabs.Main:AddRightGroupbox("Boat")
 
@@ -1322,7 +1161,7 @@ local Success, Error = pcall(function()
 				fireproximityprompt(Prompt)
 			end)
 
-			task.delay(2, function()
+			task.delay(4, function()
 				TPConnection:Disconnect()
 				Utils.TP(Origin)
 				State.GettingMeteor = false
@@ -1358,7 +1197,7 @@ local Success, Error = pcall(function()
 					local Method = getnamecallmethod()
 
 					local Args = { ... }
-					local self = pop(Args, 1)
+					local self = table.remove(Args, 1)
 
 					if Method == "FireServer" then
 						if self == Remotes.ReelFinished then
@@ -1380,6 +1219,12 @@ local Success, Error = pcall(function()
 			return oldnamecall(...)
 		end)
 	end
+
+	local ShopUpdateCoroutine = coroutine.create(function()
+		while task.wait(1) do
+			Utils.UpdateShopDropdown()
+		end
+	end)
 
 	local AutoClickCoroutine = coroutine.create(function()
 		function Utils.MountShakeUI(ShakeUI: ScreenGui)
@@ -1523,6 +1368,20 @@ local Success, Error = pcall(function()
 								ResetTool()
 							end
 						end
+
+						-- another fix
+						if
+							Utils.CountInstances(LocalPlayer.PlayerGui, "reel") > 1
+						then
+							-- reeling is broken, reset tool and delete the glitched reel UI
+							ResetTool()
+							for _, Child in next, LocalPlayer.PlayerGui:GetChildren() do
+								if Child.Name == "reel" then
+									Child:Destroy()
+								end
+							end
+						end
+
 
 						if Values.casted.Value == false then
 							LastCastAttempt = tick()
@@ -1696,10 +1555,12 @@ local Success, Error = pcall(function()
 	coroutine.resume(AutoClickCoroutine)
 	coroutine.resume(AutoReelCoroutine)
 	coroutine.resume(AutoCastCoroutine)
+	coroutine.resume(ShopUpdateCoroutine)
 	Collect(ServerStressCoroutine)
 	Collect(AutoClickCoroutine)
 	Collect(AutoReelCoroutine)
 	Collect(AutoCastCoroutine)
+	Collect(ShopUpdateCoroutine)
 
 	Collect(LocalPlayer.CharacterAdded:Connect(Utils.CharacterAdded))
 	Collect(RunService.RenderStepped:Connect(function()
