@@ -1,10 +1,12 @@
 --!nolint BuiltinGlobalWrite
+--!optimize 2
+--!native
 
 local Success, Error = pcall(function()
 	Start = os.clock()
-	NO_HOOKING = false
+	local NO_HOOKING = false
 
-	local Version = 0.9
+	local Version = 0.91
 	local SubVersion = "indev"
 	local Debugging = true
 	local Title = "Sasware"
@@ -19,7 +21,6 @@ local Success, Error = pcall(function()
 	end
 
 	local TweenService = game:GetService("TweenService")
-	local Debris = game:GetService("Debris")
 	local VirtualInputManager = game:GetService("VirtualInputManager") -- detected ik
 	local VirtualUser = game:GetService("VirtualUser")
 	local StarterGui = game:GetService("StarterGui")
@@ -50,6 +51,8 @@ local Success, Error = pcall(function()
 	local State = {
 		GettingMeteor = false,
 		OwnedBoats = {},
+		LastToolReset = os.clock(),
+		ToolResetCooldown = 5
 	}
 
 	local GlobalStorage = {
@@ -127,7 +130,7 @@ local Success, Error = pcall(function()
 	}
 
 	local Remotes = {
-		ReelFinished = ReplicatedStorage.events:WaitForChild("reelfinished"),
+		ReelFinished = ReplicatedStorage.events:WaitForChild("reelfinished "),
 	}
 
 	local Interface = {
@@ -512,9 +515,12 @@ local Success, Error = pcall(function()
 		if CurrentTool then
 			local ToolCache = LocalPlayer.Character:FindFirstChildOfClass("Tool")
 			if CurrentTool then
-				LocalPlayer.Character.Humanoid:UnequipTools()
-				task.wait()
-				ToolCache.Parent = LocalPlayer.Character
+				if State.LastToolReset + State.ToolResetCooldown < os.clock() then
+					State.LastToolReset = os.clock()
+					LocalPlayer.Character.Humanoid:UnequipTools()
+					task.wait()
+					ToolCache.Parent = LocalPlayer.Character
+				end
 			end
 		end
 	end
@@ -1009,7 +1015,15 @@ local Success, Error = pcall(function()
 
 	GameplayDisruptionGroup:AddLabel("The server lagger is irreversible and you will be forced to rejoin if you want to disable it.", true)
 
-	Tabs.Vulnerabilities:AddRightGroupbox("Vulnerabilities"):AddLabel("dupe coming 2025")
+	local VulnGroup = Tabs.Vulnerabilities:AddRightGroupbox("Vulnerabilities")
+
+	VulnGroup:AddToggle("MoneySpam", {
+		Text = "Money spam",
+		Default = false,
+		Tooltip = "Spams money.",
+	})
+
+	VulnGroup:AddLabel("dupe coming 2025")
 
 	-- Settings
 
@@ -1476,6 +1490,13 @@ local Success, Error = pcall(function()
 	-- yea thats the vulnerability section lol
 
 	Collect(RunService.RenderStepped:Connect(function()
+
+		if GetToggleValue("MoneySpam") then
+			for _ = 1, 7 do
+				ReplicatedStorage.packages.Net["RE/DailyReward/Claim"]:FireServer()
+			end
+		end
+
 		if GetToggleValue("SpamTool") then
 			if CurrentTool then
 				for i = 20, 1, -1 do
