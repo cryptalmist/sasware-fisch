@@ -587,7 +587,7 @@ local Success, Error = pcall(function()
 	-- Load bypasses
 
 	do
-		if game.PlaceVersion >= PreloadConstants.PlaceVersionSupport then
+		if game.PlaceVersion >= 3744 then
 			local URL = "https://raw.githubusercontent.com/centerepic/sasware-fisch/refs/heads/main/bypasses/" .. PreloadConstants.BypassVersion .. ".luau"
 
 			local Success, Error = pcall(function()
