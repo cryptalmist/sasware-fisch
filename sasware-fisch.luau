@@ -4,7 +4,7 @@
 
 local PreloadConstants = {
 	PlaceVersionSupport = 3758,
-	BypassVersion = "V2"
+	BypassVersion = "V3"
 }
 
 local Success, Error = pcall(function()
@@ -22,6 +22,7 @@ local Success, Error = pcall(function()
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local TweenService = game:GetService("TweenService")
 	local VirtualInputManager = Instance.new("VirtualInputManager") -- fak u
+	local VirtualUser = game:GetService("VirtualUser")
 	local StarterGui = game:GetService("StarterGui")
 	local GuiService = game:GetService("GuiService")
 	local CollectionService = game:GetService("CollectionService")
