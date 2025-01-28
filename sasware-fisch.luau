@@ -3,15 +3,15 @@
 --!native
 
 local PreloadConstants = {
-	PlaceVersionSupport = 3746,
-	BypassVersion = "V1"
+	PlaceVersionSupport = 3758,
+	BypassVersion = "V2"
 }
 
 local Success, Error = pcall(function()
 	Start = os.clock()
 	local NO_HOOKING = false
 
-	local Version = 1
+	local Version = 1.1
 	local SubVersion = "beta"
 	local Debugging = true
 	local Title = "Sasware"
@@ -22,7 +22,6 @@ local Success, Error = pcall(function()
 	local ReplicatedStorage = game:GetService("ReplicatedStorage")
 	local TweenService = game:GetService("TweenService")
 	local VirtualInputManager = Instance.new("VirtualInputManager") -- fak u
-	local VirtualUser = game:GetService("VirtualUser")
 	local StarterGui = game:GetService("StarterGui")
 	local GuiService = game:GetService("GuiService")
 	local CollectionService = game:GetService("CollectionService")
