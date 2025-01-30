@@ -122,6 +122,11 @@ local Success, Error = pcall(function()
 		return Instance
 	end
 
+	local function EnsureStream(Root, InstancePath, Position, Timeout)
+		LocalPlayer:RequestStreamAroundAsync(Position, Timeout)
+		return WaitForTable(Root, InstancePath, Timeout)
+	end
+
 	local function EnsureInstance(Instance: Instance?): boolean
 		return (Instance and Instance:IsDescendantOf(game))
 	end
@@ -138,6 +143,8 @@ local Success, Error = pcall(function()
 	local Remotes = {
 		ReelFinished = ReplicatedStorage.events:WaitForChild("reelfinished "),
 		SellAll = ReplicatedStorage.events:WaitForChild("SellAll"),
+		Power = EnsureStream(workspace, { "world", "npcs", "Merlin", "Merlin", "power" }, Vector3.new(-930, 226, -993), 5),
+		Luck = EnsureStream(workspace, { "world", "npcs", "Merlin", "Merlin", "luck" }, Vector3.new(-930, 226, -993), 5),
 	}
 
 	local Interface = {
@@ -244,6 +251,10 @@ local Success, Error = pcall(function()
 			end
 
 			return Characters
+		end
+
+		function Utils.Net(Type : string, Index : string)
+			return ReplicatedStorage.packages.Net:FindFirstChild(Type .. "/" .. Index)
 		end
 
 		function Utils.Character()
@@ -860,6 +871,37 @@ local Success, Error = pcall(function()
 		end
 	end)
 
+	ShopGroupBox:AddDivider()
+
+	ShopGroupBox:AddLabel("Merlin")
+
+	ShopGroupBox:AddSlider("MerlinAmount", {
+		Text = "Item amount",
+		Default = 1,
+		Min = 1,
+		Max = 1000,
+		Rounding = 0,
+		Compact = false
+	})
+
+	ShopGroupBox:AddButton("Buy Power", function()
+		local Amount = GetOptionValue("MerlinAmount")
+		for i = 1, Amount do
+			task.spawn(function()
+				Remotes.Power:InvokeServer()
+			end)
+		end
+	end)
+
+	ShopGroupBox:AddButton("Buy Luck", function()
+		local Amount = GetOptionValue("MerlinAmount")
+		for i = 1, Amount do
+			task.spawn(function()
+				Remotes.Luck:InvokeServer()
+			end)
+		end
+	end)
+
 	local BoatGroupBox = Tabs.Main:AddRightGroupbox("Boat")
 
 	BoatGroupBox:AddDropdown("BoatSpawnDropdown", {
@@ -871,7 +913,7 @@ local Success, Error = pcall(function()
 		Tooltip = "Boat to spawn",
 	})
 
-	BoatGroupBox:AddButton("Remote-Spawn Boat [broken for now]", function()
+	BoatGroupBox:AddButton("Remote-Spawn Boat", function()
 		UI.Library:Toggle()
 
 		local BoatSpawnLocation = LocalPlayer.Character:GetPivot().Position
@@ -952,7 +994,11 @@ local Success, Error = pcall(function()
 				BoatPreview:Destroy()
 
 				if Result then
-					LocalPlayer.PlayerGui.hud.safezone.shipwright.ships.main.safezone.spawnattempt:FireServer(BoatName)
+					
+					Utils.Net("RF", "Boats/Spawn"):InvokeServer(BoatName)
+					Utils.Net("RE", "Boats/Close"):FireServer()
+					LocalPlayer.PlayerGui.hud.safezone.shipwright.Visible = false
+			
 					-- this game is so bad
 					repeat
 						task.wait(0.5)
@@ -984,7 +1030,7 @@ local Success, Error = pcall(function()
 
 					if WaterHeight then
 						Ship.PlanePart.Position = Ship.PlanePart.Position * Vector3.new(1, 0, 1)
-							+ Vector3.new(0, WaterHeight.Position.Y, 0)
+							+ Vector3.new(0, 127, 0)
 					end
 				end
 
@@ -1285,6 +1331,9 @@ local Success, Error = pcall(function()
 
 	local ShopUpdateCoroutine = coroutine.create(function()
 		while task.wait(1) do
+			if GetToggleValue("AutoSell") then
+				Remotes.SellAll:InvokeServer()
+			end
 			Utils.UpdateShopDropdown()
 		end
 	end)
