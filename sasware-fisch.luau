@@ -11,7 +11,7 @@ local Success, Error = pcall(function()
 	Start = os.clock()
 	local NO_HOOKING = false
 
-	local Version = 1.1
+	local Version = 1.2
 	local SubVersion = "beta"
 	local Debugging = true
 	local Title = "Sasware"
