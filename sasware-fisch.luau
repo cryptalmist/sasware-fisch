@@ -3,7 +3,7 @@
 --!native
 
 local PreloadConstants = {
-	PlaceVersionSupport = 3758,
+	PlaceVersionSupport = 3765,
 	BypassVersion = "V3"
 }
 
@@ -137,6 +137,7 @@ local Success, Error = pcall(function()
 
 	local Remotes = {
 		ReelFinished = ReplicatedStorage.events:WaitForChild("reelfinished "),
+		SellAll = ReplicatedStorage.events:WaitForChild("SellAll"),
 	}
 
 	local Interface = {
@@ -391,8 +392,14 @@ local Success, Error = pcall(function()
 				end
 
 			elseif Child:IsA("Humanoid") then
+
 				Collect(Child.StateChanged:Connect(function()
 					if GetToggleValue("ZoneFish") then
+						for _, State : Enum.HumanoidStateType in next, Enum.HumanoidStateType:GetEnumItems() do
+							if State ~= Enum.HumanoidStateType.Running then
+								Child:SetStateEnabled(State, false)
+							end
+						end
 						Child:ChangeState(Enum.HumanoidStateType.Running)
 					end
 				end))
@@ -533,7 +540,8 @@ local Success, Error = pcall(function()
 
 	local function Unload()
 		Toasts.CancelAllToasts()
-		Utils.GenericToast(3, "Unloaded successfully!")
+
+		RunService:Set3dRenderingEnabled(true)
 
 		Library:Unload()
 		VelocityFly:Toggle(false)
@@ -578,6 +586,8 @@ local Success, Error = pcall(function()
 		getgenv().Toggles = nil
 		getgenv().Options = nil
 		getgenv().sasware_fisch_unload = nil
+
+		Utils.GenericToast(3, "Unloaded successfully!")
 
 		Unloaded = true
 	end
@@ -748,6 +758,16 @@ local Success, Error = pcall(function()
 		Tooltip = "Automatically deletes fish models.",
 	})
 
+	UtilitiesGroupBox:AddToggle("DisableRendering", {
+		Text = "Disable rendering [+FPS]",
+		Default = false,
+		Tooltip = "Disables 3D rendering.",
+		Callback = function(Value: boolean)
+			RunService:Set3dRenderingEnabled(not Value)
+		end,
+	})
+
+
 	UtilitiesGroupBox:AddToggle("DisableInventory", {
 		Text = "Disable custom inventory [+FPS]",
 		Default = false,
@@ -851,7 +871,7 @@ local Success, Error = pcall(function()
 		Tooltip = "Boat to spawn",
 	})
 
-	BoatGroupBox:AddButton("Remote-Spawn Boat", function()
+	BoatGroupBox:AddButton("Remote-Spawn Boat [broken for now]", function()
 		UI.Library:Toggle()
 
 		local BoatSpawnLocation = LocalPlayer.Character:GetPivot().Position
@@ -992,6 +1012,11 @@ local Success, Error = pcall(function()
 				UI.Toggles.InfiniteOxygen:SetValue(true)
 				ZoneFishOrigin = LocalPlayer.Character:GetPivot()
 			else
+
+				for _, State : Enum.HumanoidStateType in next, Enum.HumanoidStateType:GetEnumItems() do
+					LocalPlayer.Character.Humanoid:SetStateEnabled(State, true)
+				end
+
 				if ZoneFishOrigin then
 					LocalPlayer.Character.Humanoid:UnequipTools()
 					for _ = 1, 10 do
@@ -1010,6 +1035,14 @@ local Success, Error = pcall(function()
 		Multi = false,
 		Text = "Select zone",
 		Tooltip = "Zone to fish in",
+	})
+
+	local AutomationEconomyGroup = Tabs.Automation:AddLeftGroupbox("Economy")
+
+	AutomationEconomyGroup:AddToggle("AutoSell", {
+		Text = "Auto-sell",
+		Default = false,
+		Tooltip = "Automatically sells items."
 	})
 
 	local GameVisualsGroup = Tabs.Visuals:AddLeftGroupbox("In-game")
@@ -1038,12 +1071,6 @@ local Success, Error = pcall(function()
 	GameplayDisruptionGroup:AddLabel("The server lagger is irreversible and you will be forced to rejoin if you want to disable it.", true)
 
 	local VulnGroup = Tabs.Vulnerabilities:AddRightGroupbox("Vulnerabilities")
-
-	VulnGroup:AddToggle("MoneySpam", {
-		Text = "Money spam",
-		Default = false,
-		Tooltip = "Spams money.",
-	})
 
 	VulnGroup:AddLabel("dupe coming 2025")
 
@@ -1166,7 +1193,7 @@ local Success, Error = pcall(function()
 	end))
 
 	Collect(Interface.Inventory:GetPropertyChangedSignal("Visible"):Connect(function()
-		if GetToggleValue("DisableInventory") then
+		if GetToggleValue("DisableInventory") and Interface.Inventory.Visible == true then
 			task.wait()
 			Interface.Inventory.Visible = false
 		end
@@ -1265,24 +1292,13 @@ local Success, Error = pcall(function()
 	local AutoClickCoroutine = coroutine.create(function()
 		function Utils.MountShakeUI(ShakeUI: ScreenGui)
 			local SafeZone: Frame? = ShakeUI:WaitForChild("safezone", 5) :: Frame?
-
+			
 			local function HandleButton(Button: ImageButton)
 				Button.Selectable = true -- For some reason this is false for the first 0.2 seconds.
 
-				GuiService.AutoSelectGuiEnabled = false
-				GuiService.GuiNavigationEnabled = true
-
 				if EnsureInstance(Button) then
 					GuiService.SelectedObject = Button
-					task.wait()
-					VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-					VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
-					task.wait()
 				end
-
-				GuiService.AutoSelectGuiEnabled = true
-				GuiService.GuiNavigationEnabled = false
-				GuiService.SelectedObject = nil
 			end
 
 			if not SafeZone then
@@ -1324,9 +1340,13 @@ local Success, Error = pcall(function()
 				end)
 
 				repeat
-					wait()
+					RunService.RenderStepped:Wait()
+					VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+					VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+					RunService.RenderStepped:Wait()
 				until not SafeZone:IsDescendantOf(LocalPlayer.PlayerGui)
 				Connection:Disconnect()
+				GuiService.SelectedObject = nil
 			end
 		end
 
@@ -1513,10 +1533,10 @@ local Success, Error = pcall(function()
 
 	Collect(RunService.RenderStepped:Connect(function()
 
-		if GetToggleValue("MoneySpam") then
-			for _ = 1, 7 do
-				ReplicatedStorage.packages.Net["RE/DailyReward/Claim"]:FireServer()
-			end
+		local Inventory = WaitForTable(LocalPlayer.PlayerGui, { "hud", "safezone", "backpack" })
+		if Inventory and Inventory.Visible then
+			Inventory.Visible = not GetToggleValue("DisableInventory")
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, GetToggleValue("DisableInventory"))
 		end
 
 		if GetToggleValue("SpamTool") then
