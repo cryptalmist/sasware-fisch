@@ -3,15 +3,15 @@
 --!native
 
 local PreloadConstants = {
-	PlaceVersionSupport = 3840,
-	BypassVersion = "V3"
+	PlaceVersionSupport = 3790,
+	BypassVersion = "V3",
 }
 
 local Success, Error = pcall(function()
 	Start = os.clock()
 	local NO_HOOKING = false
 
-	local Version = 1.2
+	local Version = 1.3
 	local SubVersion = "beta"
 	local Debugging = true
 	local Title = "Sasware"
@@ -31,12 +31,16 @@ local Success, Error = pcall(function()
 	local VeryImportantPart = Instance.new("Part") -- fake zone for tricking temperature/oxygen scripts
 	-- 												  it's scuffed but works on literally any exec
 
-	-- Check PlaceVersion 
+	-- Check PlaceVersion
 	if game.PlaceVersion > PreloadConstants.PlaceVersionSupport then
-		Players.LocalPlayer:Kick("PlaceVersionTooHigh | " .. game.PlaceVersion .. " > " .. PreloadConstants.PlaceVersionSupport)
+		Players.LocalPlayer:Kick(
+			"PlaceVersionTooHigh | " .. game.PlaceVersion .. " > " .. PreloadConstants.PlaceVersionSupport
+		)
 	end
 
-	local Toasts = loadstring(game:HttpGet("https://raw.githubusercontent.com/centerepic/sasware-fisch/refs/heads/main/toasts.lua"))()
+	local Toasts = loadstring(
+		game:HttpGet("https://raw.githubusercontent.com/centerepic/sasware-fisch/refs/heads/main/toasts.lua")
+	)()
 
 	do
 		VeryImportantPart.Name = "SpawnBox"
@@ -47,7 +51,7 @@ local Success, Error = pcall(function()
 		name.Name = "zonename"
 		name.Value = "???"
 	end
-	
+
 	local Camera = workspace.CurrentCamera
 
 	local ZoneFishOrigin = nil
@@ -58,7 +62,7 @@ local Success, Error = pcall(function()
 		GettingMeteor = false,
 		OwnedBoats = {},
 		LastToolReset = os.clock(),
-		ToolResetCooldown = 5
+		ToolResetCooldown = 5,
 	}
 
 	local GlobalStorage = {
@@ -66,8 +70,8 @@ local Success, Error = pcall(function()
 			["Overgrowth Caves"] = true,
 			["Frigid Cavern"] = true,
 			["Cryogenic Canal"] = true,
-			["Glacial Grotto"] = true
-		}
+			["Glacial Grotto"] = true,
+		},
 	}
 
 	-- Game instance paths
@@ -122,9 +126,47 @@ local Success, Error = pcall(function()
 		return Instance
 	end
 
+	local function GetFirstAncestorOfClass(Object: Instance, Class: string)
+		local Ancestor = Object.Parent
+		local Depth = 0
+		while Ancestor do
+			Depth += 1
+
+			if Depth > 255 then
+				warn("Aborted GetFirstAncestorOfClass: Too deep")
+				return nil
+			end
+
+			if Ancestor:IsA(Class) then
+				return Ancestor
+			end
+
+			Ancestor = Ancestor.Parent
+		end
+		return nil
+	end
+
+	local function LockPersistent(Object: Model)
+		assert(Object:IsA("Model"), "Object must be a model")
+		if Object.ModelStreamingMode ~= Enum.ModelStreamingMode.Persistent then
+			CollectionService:AddTag(Object, "ForcePersistent")
+			Object:SetAttribute("OldStreamingMode", Object.ModelStreamingMode.Name)
+			Object.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
+		end
+	end
+
 	local function EnsureStream(Root, InstancePath, Position, Timeout)
 		LocalPlayer:RequestStreamAroundAsync(Position, Timeout)
-		return WaitForTable(Root, InstancePath, Timeout)
+
+		local Target = WaitForTable(Root, InstancePath, Timeout)
+
+		local Model = GetFirstAncestorOfClass(Target, "Model")
+
+		if Model then
+			LockPersistent(Model)
+		end
+
+		return Target
 	end
 
 	local function EnsureInstance(Instance: Instance?): boolean
@@ -143,8 +185,18 @@ local Success, Error = pcall(function()
 	local Remotes = {
 		ReelFinished = ReplicatedStorage.events:WaitForChild("reelfinished "),
 		SellAll = ReplicatedStorage.events:WaitForChild("SellAll"),
-		Power = EnsureStream(workspace, { "world", "npcs", "Merlin", "Merlin", "power" }, Vector3.new(-930, 226, -993), 5),
-		Luck = EnsureStream(workspace, { "world", "npcs", "Merlin", "Merlin", "luck" }, Vector3.new(-930, 226, -993), 5),
+		Power = EnsureStream(
+			workspace,
+			{ "world", "npcs", "Merlin", "Merlin", "power" },
+			Vector3.new(-930, 226, -993),
+			5
+		),
+		Luck = EnsureStream(
+			workspace,
+			{ "world", "npcs", "Merlin", "Merlin", "luck" },
+			Vector3.new(-930, 226, -993),
+			5
+		),
 	}
 
 	local Interface = {
@@ -202,8 +254,7 @@ local Success, Error = pcall(function()
 
 	local Utils = {}
 	do
-
-		function Utils.CountInstances(Parent : Instance, Name : string) : number
+		function Utils.CountInstances(Parent: Instance, Name: string): number
 			local Count = 0
 			for _, Instance in next, Parent:GetChildren() do
 				if Instance.Name == Name then
@@ -253,7 +304,7 @@ local Success, Error = pcall(function()
 			return Characters
 		end
 
-		function Utils.Net(Type : string, Index : string)
+		function Utils.Net(Type: string, Index: string)
 			return ReplicatedStorage.packages.Net:FindFirstChild(Type .. "/" .. Index)
 		end
 
@@ -385,7 +436,6 @@ local Success, Error = pcall(function()
 				CurrentTool = Child
 
 				if GetToggleValue("ServerStresser") then
-					
 					local FishModel = Child:WaitForChild("Fish", 1)
 
 					if FishModel then
@@ -393,20 +443,17 @@ local Success, Error = pcall(function()
 					end
 
 					task.delay(0.5, function()
-						for i,v in next, Child:GetDescendants() do
+						for i, v in next, Child:GetDescendants() do
 							if v:IsA("BasePart") then
 								v.Anchored = true
 							end
 						end
 					end)
-
 				end
-
 			elseif Child:IsA("Humanoid") then
-
 				Collect(Child.StateChanged:Connect(function()
 					if GetToggleValue("ZoneFish") then
-						for _, State : Enum.HumanoidStateType in next, Enum.HumanoidStateType:GetEnumItems() do
+						for _, State: Enum.HumanoidStateType in next, Enum.HumanoidStateType:GetEnumItems() do
 							if State ~= Enum.HumanoidStateType.Running then
 								Child:SetStateEnabled(State, false)
 							end
@@ -505,7 +552,6 @@ local Success, Error = pcall(function()
 
 			UI.Options.RemoteShopDropdown:SetValues(Values)
 		end
-
 	end
 
 	local TeleportLocations = {}
@@ -609,12 +655,14 @@ local Success, Error = pcall(function()
 
 	do
 		if game.PlaceVersion >= 3744 then
-			local URL = "https://raw.githubusercontent.com/centerepic/sasware-fisch/refs/heads/main/bypasses/" .. PreloadConstants.BypassVersion .. ".luau"
+			local URL = "https://raw.githubusercontent.com/centerepic/sasware-fisch/refs/heads/main/bypasses/"
+				.. PreloadConstants.BypassVersion
+				.. ".luau"
 
 			local Success, Error = pcall(function()
 				return loadstring(game:HttpGet(URL))()
 			end)
-	
+
 			if not Success then
 				LocalPlayer:Kick("Failed to load SasGuard! " .. Error)
 			end
@@ -745,7 +793,7 @@ local Success, Error = pcall(function()
 	UtilitiesGroupBox:AddToggle("DisablePeakEffects", {
 		Text = "Disable oxygen/temperature",
 		Default = false,
-		Tooltip = "Disables peak effects."
+		Tooltip = "Disables peak effects.",
 	})
 
 	UtilitiesGroupBox:AddToggle("InfiniteOxygen", {
@@ -778,7 +826,6 @@ local Success, Error = pcall(function()
 		end,
 	})
 
-
 	UtilitiesGroupBox:AddToggle("DisableInventory", {
 		Text = "Disable custom inventory [+FPS]",
 		Default = false,
@@ -788,38 +835,6 @@ local Success, Error = pcall(function()
 			if Inventory then
 				Inventory.Visible = not Value
 				StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, Value)
-			end
-		end,
-	})
-
-	UtilitiesGroupBox:AddToggle("PersistentModels", {
-		Text = "Persistent map [-Ping]",
-		Default = false,
-		Tooltip = "Attempts to prevent models from being unloaded.",
-		Callback = function(Value: boolean)
-			if Value then
-				for _, Descendant in next, workspace:GetDescendants() do
-					if Descendant:IsA("Model") then
-						if Descendant.ModelStreamingMode ~= Enum.ModelStreamingMode.Persistent then
-							CollectionService:AddTag(Descendant, "ForcePersistent")
-							Descendant:SetAttribute("OldStreamingMode", Descendant.ModelStreamingMode.Name)
-							Descendant.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
-						end
-					end
-				end
-			else
-				for _, PersistentModel: Model in next, CollectionService:GetTagged("ForcePersistent") do
-					if PersistentModel:GetAttribute("OldStreamingMode") then
-						local OldStreamingMode: string = PersistentModel:GetAttribute("OldStreamingMode") :: string
-						PersistentModel.ModelStreamingMode =
-							Enum.ModelStreamingMode[OldStreamingMode] :: Enum.ModelStreamingMode
-					else
-						PersistentModel.ModelStreamingMode = Enum.ModelStreamingMode.Default
-					end
-
-					CollectionService:RemoveTag(PersistentModel, "ForcePersistent")
-					PersistentModel:SetAttribute("OldStreamingMode", nil)
-				end
 			end
 		end,
 	})
@@ -834,7 +849,7 @@ local Success, Error = pcall(function()
 	})
 
 	local ShopGroupBox = Tabs.Main:AddLeftGroupbox("Remote Shop")
-	
+
 	ShopGroupBox:AddDropdown("RemoteShopDropdown", {
 		Values = {},
 		Default = 1,
@@ -848,7 +863,6 @@ local Success, Error = pcall(function()
 		local Item = workspace:WaitForChild("world"):WaitForChild("interactables"):FindFirstChild(Selected) :: Model?
 
 		if Item then
-
 			local Origin = LocalPlayer.Character:GetPivot()
 			local LockPositionConnection = RunService.Heartbeat:Connect(function()
 				Utils.TP(Item:GetPivot())
@@ -881,7 +895,7 @@ local Success, Error = pcall(function()
 		Min = 1,
 		Max = 1000,
 		Rounding = 0,
-		Compact = false
+		Compact = false,
 	})
 
 	ShopGroupBox:AddButton("Buy Power", function()
@@ -994,11 +1008,10 @@ local Success, Error = pcall(function()
 				BoatPreview:Destroy()
 
 				if Result then
-					
 					Utils.Net("RF", "Boats/Spawn"):InvokeServer(BoatName)
 					Utils.Net("RE", "Boats/Close"):FireServer()
 					LocalPlayer.PlayerGui.hud.safezone.shipwright.Visible = false
-			
+
 					-- this game is so bad
 					repeat
 						task.wait(0.5)
@@ -1058,8 +1071,7 @@ local Success, Error = pcall(function()
 				UI.Toggles.InfiniteOxygen:SetValue(true)
 				ZoneFishOrigin = LocalPlayer.Character:GetPivot()
 			else
-
-				for _, State : Enum.HumanoidStateType in next, Enum.HumanoidStateType:GetEnumItems() do
+				for _, State: Enum.HumanoidStateType in next, Enum.HumanoidStateType:GetEnumItems() do
 					LocalPlayer.Character.Humanoid:SetStateEnabled(State, true)
 				end
 
@@ -1088,7 +1100,7 @@ local Success, Error = pcall(function()
 	AutomationEconomyGroup:AddToggle("AutoSell", {
 		Text = "Auto-sell",
 		Default = false,
-		Tooltip = "Automatically sells items."
+		Tooltip = "Automatically sells items.",
 	})
 
 	local GameVisualsGroup = Tabs.Visuals:AddLeftGroupbox("In-game")
@@ -1105,16 +1117,19 @@ local Success, Error = pcall(function()
 		Text = "Lag/Crash server",
 		Default = false,
 		Tooltip = "Spams tools to lag the server.",
-		Callback = function(Value : boolean)
+		Callback = function(Value: boolean)
 			if not Value then
 				game:GetService("TeleportService"):Teleport(game.PlaceId, LocalPlayer)
 			else
 				Utils.TP(LocalPlayer.Character:GetPivot().Position + Vector3.new(0, 9e9, 0))
 			end
-		end
+		end,
 	})
 
-	GameplayDisruptionGroup:AddLabel("The server lagger is irreversible and you will be forced to rejoin if you want to disable it.", true)
+	GameplayDisruptionGroup:AddLabel(
+		"The server lagger is irreversible and you will be forced to rejoin if you want to disable it.",
+		true
+	)
 
 	local VulnGroup = Tabs.Vulnerabilities:AddRightGroupbox("Vulnerabilities")
 
@@ -1143,7 +1158,9 @@ local Success, Error = pcall(function()
 	MenuGroup:AddToggle("ShowCustomCursor", {
 		Text = "Custom Cursor",
 		Default = true,
-		Callback = function(Value) Library.ShowCustomCursor = Value end
+		Callback = function(Value)
+			Library.ShowCustomCursor = Value
+		end,
 	})
 	Library.ShowCustomCursor = UI.Toggles.ShowCustomCursor.Value
 
@@ -1245,18 +1262,6 @@ local Success, Error = pcall(function()
 		end
 	end))
 
-	Collect(workspace.DescendantAdded:Connect(function(Descendant: Instance)
-		if Descendant:IsA("Model") then
-			if GetToggleValue("PersistentModels") then
-				if Descendant.ModelStreamingMode ~= Enum.ModelStreamingMode.Persistent then
-					CollectionService:AddTag(Descendant, "ForcePersistent")
-					Descendant:SetAttribute("OldStreamingMode", Descendant.ModelStreamingMode.Name)
-					Descendant.ModelStreamingMode = Enum.ModelStreamingMode.Persistent
-				end
-			end
-		end
-	end))
-
 	Collect(Interface.MeteorItems.ChildAdded:Connect(function(Item: Model)
 		if GetToggleValue("AutoMeteor") then
 			State.GettingMeteor = true
@@ -1267,6 +1272,9 @@ local Success, Error = pcall(function()
 
 			local TPConnection = RunService.PostSimulation:Connect(function()
 				Utils.TP(Center:GetPivot() - (Vector3.yAxis * 5))
+			end)
+
+			task.delay(2, function()
 				fireproximityprompt(Prompt)
 			end)
 
@@ -1341,7 +1349,7 @@ local Success, Error = pcall(function()
 	local AutoClickCoroutine = coroutine.create(function()
 		function Utils.MountShakeUI(ShakeUI: ScreenGui)
 			local SafeZone: Frame? = ShakeUI:WaitForChild("safezone", 5) :: Frame?
-			
+
 			local function HandleButton(Button: ImageButton)
 				Button.Selectable = true -- For some reason this is false for the first 0.2 seconds.
 
@@ -1390,8 +1398,10 @@ local Success, Error = pcall(function()
 
 				repeat
 					RunService.RenderStepped:Wait()
-					VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
-					VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+					if GuiService.SelectedObject and GuiService.SelectedObject:IsDescendantOf(SafeZone) then
+						VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Return, false, game)
+						VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Return, false, game)
+					end
 					RunService.RenderStepped:Wait()
 				until not SafeZone:IsDescendantOf(LocalPlayer.PlayerGui)
 				Connection:Disconnect()
@@ -1475,9 +1485,7 @@ local Success, Error = pcall(function()
 						end
 
 						-- another fix
-						if
-							Utils.CountInstances(LocalPlayer.PlayerGui, "reel") > 1
-						then
+						if Utils.CountInstances(LocalPlayer.PlayerGui, "reel") > 1 then
 							-- reeling is broken, reset tool and delete the glitched reel UI
 							ResetTool()
 							for _, Child in next, LocalPlayer.PlayerGui:GetChildren() do
@@ -1486,7 +1494,6 @@ local Success, Error = pcall(function()
 								end
 							end
 						end
-
 
 						if Values.casted.Value == false then
 							LastCastAttempt = tick()
@@ -1537,15 +1544,13 @@ local Success, Error = pcall(function()
 	end)
 
 	local ServerStressCoroutine = coroutine.create(function()
-
 		local Backpack = LocalPlayer.Backpack
 
-		local function IsFish(Tool : Tool)
+		local function IsFish(Tool: Tool)
 			return Tool:FindFirstChild("fishscript") or (Tool:GetAttribute("IsFish") == true)
 		end
 
 		while task.wait(5) do
-
 			if not GetToggleValue("ServerStresser") then
 				continue
 			end
@@ -1553,25 +1558,21 @@ local Success, Error = pcall(function()
 			for i, Tool in next, Backpack:GetChildren() do
 				task.spawn(function()
 					if IsFish(Tool) then
-
 						Tool:SetAttribute("IsFish", true)
-	
+
 						local FishModel = Tool:FindFirstChild("Fish")
-	
+
 						if FishModel then
 							FishModel:Destroy()
 						end
-	
+
 						Tool.Parent = LocalPlayer.Character
-	
 					end
 				end)
 			end
 
 			LocalPlayer.Character.Humanoid:UnequipTools()
-
 		end
-
 	end)
 
 	-- VULNERABILTY SECTION: PRONE TO DETECTION & PATCHES
@@ -1581,7 +1582,6 @@ local Success, Error = pcall(function()
 	-- yea thats the vulnerability section lol
 
 	Collect(RunService.RenderStepped:Connect(function()
-
 		local Inventory = WaitForTable(LocalPlayer.PlayerGui, { "hud", "safezone", "backpack" })
 		if Inventory and Inventory.Visible then
 			Inventory.Visible = not GetToggleValue("DisableInventory")
@@ -1695,7 +1695,6 @@ local Success, Error = pcall(function()
 			CollectionService:RemoveTag(PersistentModel, "ForcePersistent")
 			PersistentModel:SetAttribute("OldStreamingMode", nil)
 		end
-
 	end)
 
 	if LocalPlayer.Character then
