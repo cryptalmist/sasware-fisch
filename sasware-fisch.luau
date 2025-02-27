@@ -2,11 +2,6 @@
 --!optimize 2
 --!native
 
-local PreloadConstants = {
-	PlaceVersionSupport = 3790,
-	BypassVersion = "V3",
-}
-
 local Success, Error = pcall(function()
 	Start = os.clock()
 	local NO_HOOKING = false
@@ -30,13 +25,6 @@ local Success, Error = pcall(function()
 	local Lighting = game:GetService("Lighting")
 	local VeryImportantPart = Instance.new("Part") -- fake zone for tricking temperature/oxygen scripts
 	-- 												  it's scuffed but works on literally any exec
-
-	-- Check PlaceVersion
-	if game.PlaceVersion > PreloadConstants.PlaceVersionSupport then
-		Players.LocalPlayer:Kick(
-			"PlaceVersionTooHigh | " .. game.PlaceVersion .. " > " .. PreloadConstants.PlaceVersionSupport
-		)
-	end
 
 	local Toasts = loadstring(
 		game:HttpGet("https://raw.githubusercontent.com/centerepic/sasware-fisch/refs/heads/main/toasts.lua")
@@ -650,24 +638,6 @@ local Success, Error = pcall(function()
 	end
 
 	getgenv().sasware_fisch_unload = Unload
-
-	-- Load bypasses
-
-	do
-		if game.PlaceVersion >= 3744 then
-			local URL = "https://raw.githubusercontent.com/centerepic/sasware-fisch/refs/heads/main/bypasses/"
-				.. PreloadConstants.BypassVersion
-				.. ".luau"
-
-			local Success, Error = pcall(function()
-				return loadstring(game:HttpGet(URL))()
-			end)
-
-			if not Success then
-				LocalPlayer:Kick("Failed to load SasGuard! " .. Error)
-			end
-		end
-	end
 
 	-- Initalize UI (finally)
 
