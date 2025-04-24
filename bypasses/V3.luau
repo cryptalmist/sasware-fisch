@@ -1,3 +1,4 @@
+repeat wait() until getgenv().MainUnload
 -- plz dont skid bypass thx
 
 BYPASS_SUBVERSION = "Full-Emulationv2"
